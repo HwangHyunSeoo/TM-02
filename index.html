@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Image Classification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+        #webcam {
+            width: 640px;
+            height: 480px;
+            border: 1px solid black;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Image Classification with Teachable Machine</h1>
+    <video id="webcam" autoplay></video>
+    <div id="result">Loading model...</div>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image"></script>
+    <script>
+        const webcamElement = document.getElementById('webcam');
+
+        async function setupWebcam() {
+            return new Promise((resolve, reject) => {
+                const navigatorAny = navigator;
+                navigator.getUserMedia = navigator.getUserMedia ||
+                    navigatorAny.webkitGetUserMedia || navigatorAny.mozGetUserMedia ||
+                    navigatorAny.msGetUserMedia;
+                if (navigator.getUserMedia) {
+                    navigator.getUserMedia({ video: true },
+                        stream => {
+                            webcamElement.srcObject = stream;
+                            webcamElement.addEventListener('loadeddata', resolve, false);
+                        },
+                        error => reject(error));
+                } else {
+                    reject();
+                }
+            });
+        }
+
+        let model, labelContainer, maxPredictions;
+
+        async function init() {
+            const URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_URL/";
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            labelContainer = document.getElementById('result');
+            labelContainer.innerHTML = "Model loaded, starting predictions...";
+            predict();
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcamElement);
+            let highestPrediction = { className: "", probability: 0 };
+
+            prediction.forEach(pred => {
+                if (pred.probability > highestPrediction.probability) {
+                    highestPrediction = pred;
+                }
+            });
+
+            labelContainer.innerHTML = `${highestPrediction.className}: ${highestPrediction.probability.toFixed(2)}`;
+            requestAnimationFrame(predict);
+        }
+
+        setupWebcam().then(() => {
+            init();
+        });
+    </script>
+</body>
+</html>
