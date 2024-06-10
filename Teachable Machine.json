@@ -1,0 +1,32 @@
+let model, labelContainer, maxPredictions;
+
+async function init() {
+    const URL = "https://teachablemachine.withgoogle.com/models/YOUR_MODEL_URL/";
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    labelContainer = document.getElementById('result');
+    labelContainer.innerHTML = "Model loaded, starting predictions...";
+    predict();
+}
+
+async function predict() {
+    const prediction = await model.predict(webcamElement);
+    let highestPrediction = { className: "", probability: 0 };
+
+    prediction.forEach(pred => {
+        if (pred.probability > highestPrediction.probability) {
+            highestPrediction = pred;
+        }
+    });
+
+    labelContainer.innerHTML = `${highestPrediction.className}: ${highestPrediction.probability.toFixed(2)}`;
+    requestAnimationFrame(predict);
+}
+
+setupWebcam().then(() => {
+    init();
+});
